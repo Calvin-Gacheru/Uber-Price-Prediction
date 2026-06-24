@@ -33,14 +33,26 @@ class RideInput(BaseModel):
 @app.post("/predict")
 def predict_price(data: RideInput):
     try:
-        # Convert the input data to a DataFrame
-        input_data = pd.DataFrame([data.model_dump()])
+        # Convert Pydantic object to a dictionary using structural aliases
+        input_dict = data.model_dump(by_alias=True)
         
-        # Make a prediction using the loaded model
+        # Inject placeholder values for structural columns expected by the Pipeline
+        input_dict.update({
+            "Booking Status": "Completed",
+            "Booking Value": 0.0,
+            "Date": "2026-06-24",
+            "Time": "12:00:00",
+            "Booking ID": "PLACEHOLDER",
+            "Customer ID": "PLACEHOLDER"
+        })
+        
+        # Convert to DataFrame
+        input_data = pd.DataFrame([input_dict])
+        
+        # Run inference via the pipeline
         prediction = model.predict(input_data)
         
-        # Return the predicted price as a JSON response
-        return {"predicted_price": prediction[0]}
+        return {"predicted_price": float(prediction[0])}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
